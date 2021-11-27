@@ -45,6 +45,10 @@ class ClientFileSystem:
     def __init__(self, server: Server):
         self.server = server  # The NFS server the client is connected to
 
+    def size(self):
+        res = (yield Request(Request.Type.NFSGetAttr, self.server.NFSPROC_GETATTR))
+        return res
+
     def append(self, s):
         # The scheduler (implemented in our simulation) would handle
         # the handling of our request!
@@ -59,16 +63,15 @@ class ClientFileSystem:
 def proc_p1_main(server: Server):
     fs = ClientFileSystem(server)
 
-    # Process p1 will try to append "process1" to the end of the single file
-    # on the NFS server "server"
-    yield from fs.append("process1")
+    while (yield from fs.size()) < 3:
+        yield from fs.append('1')
 
 
 def proc_p2_main(server: Server):
     fs = ClientFileSystem(server)
 
-    # Process p2 will try to append "process2process2" to the end of the file
-    yield from fs.append("process2process2")
+    while (yield from fs.size()) < 3:
+        yield from fs.append('2')
 
 
 def dfs(proc_mains, steps, hist):
