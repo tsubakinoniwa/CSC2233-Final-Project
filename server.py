@@ -1,6 +1,7 @@
 from NFS.proc import NFSPROC
 from NFS.fattr import FileAttribute
 from NFS.fhandle import FileHandle
+from NFS.stat import Stat
 
 
 class Server(NFSPROC):
@@ -13,28 +14,36 @@ class Server(NFSPROC):
         self.files = {'foo.txt': []}
 
     def getattr(self, fhandle: FileHandle):
-        file = self.parse_fhandle(fhandle)
+        try:
+            file = self.parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT,
 
         fattr = FileAttribute()
         fattr.size = len(file)
         return fattr
 
     def lookup(self, fhandle: FileHandle, filename: str):
-        if len(fhandle.path) > 0:
-            raise FileNotFoundError("The requested file handle is invalid.")
-
-        if filename not in self.files:
-            raise FileNotFoundError("The requested file cannot be found.")
+        if len(fhandle.path) > 0 or filename not in self.files:
+            return Stat.NFSERR_NOENT,
 
         fhandle = FileHandle([filename])
-        return fhandle, self.getattr(fhandle)
+        return Stat.NFS_OK, fhandle, self.getattr(fhandle)
 
     def read(self, fhandle: FileHandle, offset: int, count: int):
-        file = self.parse_fhandle(fhandle)
-        return self.getattr(fhandle), ''.join(file[offset:min(offset+count, len(file))])
+        try:
+            file = self.parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT,
+        content = ''.join(file[offset:min(offset + count, len(file))])
+
+        return Stat.NFS_OK, self.getattr(fhandle), content
 
     def write(self, fhandle: FileHandle, offset: int, data: str):
-        file = self.parse_fhandle(fhandle)
+        try:
+            file = self.parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT,
 
         # Keep appending the null character to the file until the file is large
         # enough to fit all the write
@@ -44,14 +53,14 @@ class Server(NFSPROC):
         for i in range(len(data)):
             file[i+offset] = data[i]
 
-        return self.getattr(fhandle)
+        return Stat.NFS_OK, self.getattr(fhandle)
 
     def parse_fhandle(self, fhandle: FileHandle):
         if len(fhandle.path) != 1:
-            raise FileNotFoundError("The requested file handle is invalid.")
+            raise FileNotFoundError()
 
         filename = fhandle.path[0]
         if filename not in self.files:
-            raise FileNotFoundError("The requested file cannot be found.")
+            raise FileNotFoundError()
 
         return self.files[filename]  # Returns a reference to the content of the file
