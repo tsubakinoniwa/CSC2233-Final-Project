@@ -1,7 +1,8 @@
-from typing import Tuple
+from typing import Tuple, Optional, Union
 
 from .fattr import FileAttribute
 from .fhandle import FileHandle
+from .stat import Stat
 
 
 class NFSPROC:
@@ -16,17 +17,18 @@ class NFSPROC:
     parameters here.
     """
 
-    def getattr(self, fhandle: FileHandle) -> FileAttribute:
+    def getattr(self, fhandle: FileHandle) \
+            -> Tuple[Stat, Optional[FileAttribute]]:
         pass
 
     def lookup(self, fhandle: FileHandle, filename: str) \
-            -> Tuple[FileHandle, FileAttribute]:
+            -> Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]:
         pass
 
     def read(self, fhandle: FileHandle, offset: int, count: int) \
-            -> Tuple[FileAttribute, str]:
+            -> Tuple[Stat, Optional[FileAttribute], Optional[str]]:
         pass
 
     def write(self, fhandle: FileHandle, offset: int, data: str) \
-            -> FileAttribute:
+            -> Tuple[Stat, Optional[FileAttribute]]:
         pass
