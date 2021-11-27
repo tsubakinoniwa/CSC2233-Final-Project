@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from fattr import FileAttribute
-from fhandle import FileHandle
+from .fattr import FileAttribute
+from .fhandle import FileHandle
 
 
 class NFSPROC:
