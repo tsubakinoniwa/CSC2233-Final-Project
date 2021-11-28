@@ -153,7 +153,7 @@ class Sim:
         for i, res in enumerate(self.results):
             print('')
             print('-' * 50)
-            print(f"Scenario #{i}")
+            print(f"Scenario #{i+1}")
             print('-' * 50)
             for p, m in enumerate(res.responses):
                 if m:
