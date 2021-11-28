@@ -5,8 +5,8 @@ from NFS.proc import NFSPROC
 from NFS.fattr import FileAttribute
 from NFS.fhandle import FileHandle
 from NFS.stat import Stat
-from server import Server
-from request import Request
+from .server import Server
+from .request import Request
 
 
 class ClientFileSystem:

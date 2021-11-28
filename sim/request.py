@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Request:
     """
     Wrapper for a client request to the server that contains all the information

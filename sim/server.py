@@ -29,7 +29,7 @@ class Server(NFSPROC):
             return Stat.NFSERR_NOENT,
 
         fhandle = FileHandle([filename])
-        return Stat.NFS_OK, fhandle, self.getattr(fhandle)
+        return Stat.NFS_OK, fhandle, self.getattr(fhandle)[1]
 
     def read(self, fhandle: FileHandle, offset: int, count: int) \
             -> NFSPROC.READ_RET_TYPE:
@@ -39,7 +39,7 @@ class Server(NFSPROC):
             return Stat.NFSERR_NOENT,
         content = ''.join(file[offset:min(offset + count, len(file))])
 
-        return Stat.NFS_OK, self.getattr(fhandle), content
+        return Stat.NFS_OK, self.getattr(fhandle)[1], content
 
     def write(self, fhandle: FileHandle, offset: int, data: str) \
             -> NFSPROC.WRITE_RET_TYPE:
@@ -56,7 +56,7 @@ class Server(NFSPROC):
         for i in range(len(data)):
             file[i+offset] = data[i]
 
-        return Stat.NFS_OK, self.getattr(fhandle)
+        return Stat.NFS_OK, self.getattr(fhandle)[1]
 
     def parse_fhandle(self, fhandle: FileHandle):
         if len(fhandle.path) != 1:
