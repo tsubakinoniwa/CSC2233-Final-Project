@@ -13,7 +13,7 @@ class Server(NFSPROC):
     def __init__(self):
         self.files = {'foo.txt': []}
 
-    def getattr(self, fhandle: FileHandle):
+    def getattr(self, fhandle: FileHandle) -> NFSPROC.GETATTR_RET_TYPE:
         try:
             file = self.parse_fhandle(fhandle)
         except FileNotFoundError:
@@ -21,16 +21,18 @@ class Server(NFSPROC):
 
         fattr = FileAttribute()
         fattr.size = len(file)
-        return fattr
+        return Stat.NFS_OK, fattr
 
-    def lookup(self, fhandle: FileHandle, filename: str):
+    def lookup(self, fhandle: FileHandle, filename: str) \
+            -> NFSPROC.LOOKUP_RET_TYPE:
         if len(fhandle.path) > 0 or filename not in self.files:
             return Stat.NFSERR_NOENT,
 
         fhandle = FileHandle([filename])
         return Stat.NFS_OK, fhandle, self.getattr(fhandle)
 
-    def read(self, fhandle: FileHandle, offset: int, count: int):
+    def read(self, fhandle: FileHandle, offset: int, count: int) \
+            -> NFSPROC.READ_RET_TYPE:
         try:
             file = self.parse_fhandle(fhandle)
         except FileNotFoundError:
@@ -39,7 +41,8 @@ class Server(NFSPROC):
 
         return Stat.NFS_OK, self.getattr(fhandle), content
 
-    def write(self, fhandle: FileHandle, offset: int, data: str):
+    def write(self, fhandle: FileHandle, offset: int, data: str) \
+            -> NFSPROC.WRITE_RET_TYPE:
         try:
             file = self.parse_fhandle(fhandle)
         except FileNotFoundError:
