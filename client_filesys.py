@@ -1,3 +1,5 @@
+from collections import deque
+
 from NFS.proc import NFSPROC
 from NFS.fattr import FileAttribute
 from NFS.fhandle import FileHandle
@@ -19,6 +21,8 @@ class ClientFileSystem:
     control is automatically transferred to the controlling thread.
     """
 
+    MAX_FILES = 100  # Maximum number of files
+
     class File:
         """
         Represents each individual file. The file system also keeps track of
@@ -32,8 +36,8 @@ class ClientFileSystem:
     def __init__(self, server: Server):
         self.server = server
         self.file_descriptors = {}
+        self.available_fds = deque(range(ClientFileSystem.MAX_FILES))
         self.attribute_cache = {}
-        pass
 
     def open(self, fname: str) -> int:
         """
@@ -51,7 +55,9 @@ class ClientFileSystem:
 
         _, fhandle, fattr = resp
 
-        new_fd = len(self.file_descriptors)
+        if not len(self.available_fds):
+            return -1  # All file descriptors used up
+        new_fd = self.available_fds.popleft()
         new_file = self.File(new_fd, fhandle)
 
         self.file_descriptors[new_fd] = new_file
@@ -68,6 +74,7 @@ class ClientFileSystem:
         if fd not in self.file_descriptors:
             return False
 
+        self.available_fds.appendleft(fd)
         del self.file_descriptors[fd]
         del self.attribute_cache[fd]
         return True
