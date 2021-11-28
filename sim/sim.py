@@ -141,3 +141,22 @@ class Sim:
             res = deepcopy(self._result)
             res.file_content = ''.join(server.files['foo.txt'])
             self.results.add(res)
+
+    def summarize(self):
+        """
+        Print a summary of the unique results found by the simulation
+        """
+        print('=' * 50)
+        print(f'The simulation found {len(self.results)} unique executions.')
+        print('=' * 50)
+
+        for i, res in enumerate(self.results):
+            print('')
+            print('-' * 50)
+            print(f"Scenario #{i}")
+            print('-' * 50)
+            for p, m in enumerate(res.responses):
+                if m:
+                    print(f'p{p}: {str(m)}')
+            print(f'File: {res.file_content}')
+            print('-' * 50)
