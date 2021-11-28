@@ -43,7 +43,7 @@ class ClientFileSystem:
         """
         Open a file
         :param fname: file name of the file to open
-        :return -1 if the filenmame is not found, otherwise a file descriptor
+        :return: -1 if the filenmame is not found, otherwise a file descriptor
         """
         empty_fhandle = FileHandle([])
         req = Request(Request.Type.LOOKUP, self.server.lookup, empty_fhandle, fname)
@@ -85,7 +85,7 @@ class ClientFileSystem:
         starting from the last accessed position of the file.
         :param fd: File descriptor of the file to be read from
         :param count: Number of bytes to read
-        :return The content read, represented as a string. If the read is
+        :return: The content read, represented as a string. If the read is
         invalid, returns an empty string
         """
         if fd not in self.file_descriptors:
@@ -94,8 +94,8 @@ class ClientFileSystem:
         fhandle = FileHandle([])
         file = self.file_descriptors[fd]
         offset = file.offset
-        req = Request(Request.Type.READ, self.server.read, fhandle, offset, count)
 
+        req = Request(Request.Type.READ, self.server.read, fhandle, offset, count)
         resp = yield req
 
         if len(resp) == 1:
@@ -108,22 +108,70 @@ class ClientFileSystem:
 
         return res
 
-
-    def write(self, fd, s):
+    def write(self, fd, s) -> bool:
         """
         Writes to the file given by the file descriptor fd
         :param fd: File descriptor of the file to be written
         :param s: String representation of the write content
-        :return
+        :return: True if the write is successful, and false otherwise
         """
+        if fd not in self.file_descriptors:
+            return False
 
-        pass
+        file = self.file_descriptors[fd]
+        fhandle = file.fhandle
+        offset = file.offset
 
-    def append(self, fd, s):
+        req = Request(Request.Type.WRITE, self.server.write, fhandle, offset, s)
+        resp = yield req
+
+        if len(resp) == 1:
+            assert(resp[0] == Stat.NFSERR_NOENT)
+            return ''
+
+        _, fattr = resp
+        file.offset += len(s)
+        self.attribute_cache[fd] = fattr
+
+    def append(self, fd, s) -> bool:
         """
         Appends s to the end of the file referenced by fd
         :param fd: File descriptor of the file on which s is to be appended
         :param s: String representation of the append content
-        :return
+        :return: True if the append is successful, and false otherwise
         """
-        pass
+        if fd not in self.file_descriptors:
+            return False
+
+        # Here we stipulate that our implementation is aggressive in avoiding
+        # stale cache, in that upon every operation that involves the attribute
+        # of the file, we will do a new GETATTR instead of using the cached
+        # attributes of the file.
+        file = self.file_descriptors[fd]
+
+        req = Request(Request.Type.GETATTR, self.server.getattr, file.fhandle)
+        resp = yield req
+
+        if len(resp) == 1:
+            assert(resp[0] == Stat.NFSERR_NOENT)
+            return False
+
+        _, fattr = resp
+        self.attribute_cache[fd] = fattr
+
+        # Just asked the server for the latest file length. Append by writing
+        # to the end of file.
+        fhandle = file.handle
+        offset = fattr.size
+
+        req = Request(Request.Type.WRITE, self.server.write, fhandle, offset, s)
+        resp = yield req
+
+        if len(resp) == 1:
+            assert(resp[0] == Stat.NFSERR_NOENT)
+            return False
+
+        _, fattr = resp
+        self.attribute_cache[fd] = fattr
+
+        return True
