@@ -114,7 +114,7 @@ class ClientFileSystem:
 
         return res
 
-    def write(self, fd, s) -> Generator[
+    def write(self, fd: int, s: str) -> Generator[
             Request, NFSPROC.WRITE_RET_TYPE, bool]:
         """
         Writes to the file given by the file descriptor fd
@@ -142,7 +142,7 @@ class ClientFileSystem:
 
         return True
 
-    def append(self, fd, s) -> Generator[
+    def append(self, fd: int, s: str) -> Generator[
             Request,
             Union[NFSPROC.GETATTR_RET_TYPE, NFSPROC.WRITE_RET_TYPE],
             bool
@@ -155,13 +155,30 @@ class ClientFileSystem:
         """
         if fd not in self.file_descriptors:
             return False
+        file = self.file_descriptors[fd]
+
+        # Ask the server for the latest file length. Append by writing to the
+        # end of the file.
+        file.offset = (yield from self.size(fd))
+        if file.offset == -1:  # Check if size returned an error
+            return False
+        return (yield from self.write(fd, s))
+
+    def size(self, fd: int) -> Generator[
+            Request, NFSPROC.GETATTR_RET_TYPE, int]:
+        """
+        Returns the size of the file
+        :param fd: File descriptor of the file
+        :return: Size of the file, or -1 if an error occurred
+        """
+        if fd not in self.file_descriptors:
+            return -1
+        file = self.file_descriptors[fd]
 
         # Here we stipulate that our implementation is aggressive in avoiding
         # stale cache, in that upon every operation that involves the attribute
         # of the file, we will do a new GETATTR instead of using the cached
         # attributes of the file.
-        file = self.file_descriptors[fd]
-
         req = Request(Request.Type.GETATTR, self.server.getattr, file.fhandle)
         resp = yield req
 
@@ -171,7 +188,4 @@ class ClientFileSystem:
 
         _, fattr = resp
         self.attribute_cache[fd] = fattr
-
-        # Just asked the server for the latest file length. Append by writing
-        # to the end of file.
-        return (yield from self.write(fd, s))
+        return fattr.size
