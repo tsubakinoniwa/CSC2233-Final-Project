@@ -17,18 +17,22 @@ class NFSPROC:
     parameters here.
     """
 
-    def getattr(self, fhandle: FileHandle) \
-            -> Tuple[Stat, Optional[FileAttribute]]:
+    # Aliases for the return type of each procedure
+    GETATTR_RET_TYPE = Tuple[Stat, Optional[FileAttribute]]
+    LOOKUP_RET_TYPE = Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]
+    READ_RET_TYPE = Tuple[Stat, Optional[FileAttribute], Optional[str]]
+    WRITE_RET_TYPE = Tuple[Stat, Optional[FileAttribute]]
+
+    def getattr(self, fhandle: FileHandle) -> GETATTR_RET_TYPE:
         pass
 
-    def lookup(self, fhandle: FileHandle, filename: str) \
-            -> Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]:
+    def lookup(self, fhandle: FileHandle, filename: str) -> LOOKUP_RET_TYPE:
         pass
 
     def read(self, fhandle: FileHandle, offset: int, count: int) \
-            -> Tuple[Stat, Optional[FileAttribute], Optional[str]]:
+            -> READ_RET_TYPE:
         pass
 
     def write(self, fhandle: FileHandle, offset: int, data: str) \
-            -> Tuple[Stat, Optional[FileAttribute]]:
+            -> WRITE_RET_TYPE:
         pass

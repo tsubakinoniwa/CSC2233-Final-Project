@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Generator, Tuple, Optional, Union
 
 from NFS.proc import NFSPROC
 from NFS.fattr import FileAttribute
@@ -28,6 +29,7 @@ class ClientFileSystem:
         Represents each individual file. The file system also keeps track of
         the last written position of every given file.
         """
+
         def __init__(self, fd, fhandle: FileHandle):
             self.fd = fd
             self.offset = 0  # Last accessed position
@@ -39,7 +41,8 @@ class ClientFileSystem:
         self.available_fds = deque(range(ClientFileSystem.MAX_FILES))
         self.attribute_cache = {}
 
-    def open(self, fname: str) -> int:
+    def open(self, fname: str) -> Generator[
+            Request, NFSPROC.LOOKUP_RET_TYPE, int]:
         """
         Open a file
         :param fname: file name of the file to open
@@ -57,6 +60,7 @@ class ClientFileSystem:
 
         if not len(self.available_fds):
             return -1  # All file descriptors used up
+
         new_fd = self.available_fds.popleft()
         new_file = self.File(new_fd, fhandle)
 
@@ -79,7 +83,8 @@ class ClientFileSystem:
         del self.attribute_cache[fd]
         return True
 
-    def read(self, fd: int, count: int) -> str:
+    def read(self, fd: int, count: int) -> Generator[
+            Request, NFSPROC.READ_RET_TYPE, str]:
         """
         Reads count bytes from the file referred to by file descriptor fd,
         starting from the last accessed position of the file.
@@ -108,7 +113,8 @@ class ClientFileSystem:
 
         return res
 
-    def write(self, fd, s) -> bool:
+    def write(self, fd, s) -> Generator[
+            Request, NFSPROC.WRITE_RET_TYPE, bool]:
         """
         Writes to the file given by the file descriptor fd
         :param fd: File descriptor of the file to be written
@@ -127,13 +133,19 @@ class ClientFileSystem:
 
         if len(resp) == 1:
             assert(resp[0] == Stat.NFSERR_NOENT)
-            return ''
+            return False
 
         _, fattr = resp
         file.offset += len(s)
         self.attribute_cache[fd] = fattr
 
-    def append(self, fd, s) -> bool:
+        return True
+
+    def append(self, fd, s) -> Generator[
+            Request,
+            Union[NFSPROC.GETATTR_RET_TYPE, NFSPROC.WRITE_RET_TYPE],
+            bool
+    ]:
         """
         Appends s to the end of the file referenced by fd
         :param fd: File descriptor of the file on which s is to be appended
@@ -161,17 +173,4 @@ class ClientFileSystem:
 
         # Just asked the server for the latest file length. Append by writing
         # to the end of file.
-        fhandle = file.handle
-        offset = fattr.size
-
-        req = Request(Request.Type.WRITE, self.server.write, fhandle, offset, s)
-        resp = yield req
-
-        if len(resp) == 1:
-            assert(resp[0] == Stat.NFSERR_NOENT)
-            return False
-
-        _, fattr = resp
-        self.attribute_cache[fd] = fattr
-
-        return True
+        return (yield from self.write(fd, s))
