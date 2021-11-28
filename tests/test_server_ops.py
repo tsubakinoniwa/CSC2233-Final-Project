@@ -1,9 +1,7 @@
 import unittest
-from NFS.proc import NFSPROC
-from NFS.fattr import FileAttribute
 from NFS.fhandle import FileHandle
 from NFS.stat import Stat
-from server import Server
+from sim.server import Server
 
 
 class ServerFileOperations(unittest.TestCase):

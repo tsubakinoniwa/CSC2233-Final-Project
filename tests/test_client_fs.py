@@ -1,6 +1,6 @@
 import unittest
-from server import Server
-from client_filesys import ClientFileSystem
+from sim.server import Server
+from sim.client_filesys import ClientFileSystem
 
 
 class ClientFileSystemOperations(unittest.TestCase):
@@ -44,20 +44,20 @@ class ClientFileSystemOperations(unittest.TestCase):
 
         req = next(gen)
         resp = req.serve()
-        self.assertTrue(len(resp), 2)
+        self.assertEqual(len(resp), 2)
 
         with self.assertRaises(StopIteration) as cm:
             gen.send(resp)
         self.assertTrue(cm.exception.value)
 
         if test:
-            self.assertTrue(s, ''.join(self.server.files['foo.txt']))
+            self.assertEqual(s, ''.join(self.server.files['foo.txt']))
 
     def test_consecutive_write(self):
         fd = self.test_open_valid_file()
         self.test_write(fd=fd, s="abc", test=True)
         self.test_write(fd=fd, s="def", test=False)
-        self.assertTrue("abcdef", ''.join(self.server.files['foo.txt']))
+        self.assertEqual("abcdef", ''.join(self.server.files['foo.txt']))
 
     def test_read(self):
         s = "testing read"
@@ -82,15 +82,15 @@ class ClientFileSystemOperations(unittest.TestCase):
 
         req = next(gen)
         resp = req.serve()
-        self.assertTrue(len(resp), 2)
+        self.assertEqual(len(resp), 2)
 
         req = gen.send(resp)
         resp = req.serve()
-        self.assertTrue(len(resp), 2)
+        self.assertEqual(len(resp), 2)
         with self.assertRaises(StopIteration) as cm:
             gen.send(resp)
         self.assertTrue(cm.exception.value)
-        self.assertTrue(s1+s2, ''.join(self.server.files['foo.txt']))
+        self.assertEqual(s1+s2, ''.join(self.server.files['foo.txt']))
 
 if __name__ == '__main__':
     unittest.main()
