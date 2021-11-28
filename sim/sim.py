@@ -128,10 +128,9 @@ class Sim:
             except StopIteration:
                 self._steps[i] = False  # No more steps for this process
                 changed_steps = True
-                pass
 
             self._hist.append(i)
-            self._dfs()
+            self._dfs(verbose=verbose)
             self._hist.pop()   # Restore _hist
             if changed_steps:  # Restore _steps
                 self._steps[i] = True
@@ -140,5 +139,5 @@ class Sim:
 
         if end:
             res = deepcopy(self._result)
+            res.file_content = ''.join(server.files['foo.txt'])
             self.results.add(res)
-        
