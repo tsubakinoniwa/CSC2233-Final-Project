@@ -30,10 +30,11 @@ class ClientFileSystem:
         the last written position of every given file.
         """
 
-        def __init__(self, fd, fhandle: FileHandle):
+        def __init__(self, fd: int, fhandle: FileHandle, fname: str):
             self.fd = fd
             self.offset = 0  # Last accessed position
             self.fhandle = fhandle
+            self.fname = fname
 
     def __init__(self, server: Server):
         self.server = server
@@ -62,7 +63,7 @@ class ClientFileSystem:
             return -1  # All file descriptors used up
 
         new_fd = self.available_fds.popleft()
-        new_file = self.File(new_fd, fhandle)
+        new_file = self.File(new_fd, fhandle, fname)
 
         self.file_descriptors[new_fd] = new_file
         self.attribute_cache[new_fd] = fattr  # Fills in the attribute cache
@@ -96,8 +97,8 @@ class ClientFileSystem:
         if fd not in self.file_descriptors:
             return ''
 
-        fhandle = FileHandle([])
         file = self.file_descriptors[fd]
+        fhandle = FileHandle([file.fname])
         offset = file.offset
 
         req = Request(Request.Type.READ, self.server.read, fhandle, offset, count)
