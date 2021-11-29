@@ -71,6 +71,11 @@ class Sim:
         self._hist = []
         self._result = Sim.Result(self.n)
 
+        # Memoization that helps us skip subspaces that are equivalent to what
+        # we have already searched. Simply store a set of history strings
+        # sorted in "canonical" form to represent searched subtrees
+        self._memo = set()
+
     def explore(self, verbose=False):
         if not self.proc_mains:
             raise Exception("No main functions supplied")
@@ -81,16 +86,30 @@ class Sim:
         processes = [p(server) for p in self.proc_mains]
         requests = [next(p) for p in processes]  # Prime the generators
 
-        for ind in self._hist:
+        canonical_str = ''
+        canonical_part = ''
+
+        for idx, pid in enumerate(self._hist):
+            if len(canonical_part) == 0:
+                canonical_part += str(pid)
+            else:
+                prev_pid = self._hist[idx-1]
+                if requests[pid].commutes_with(requests[prev_pid]):
+                    canonical_part += str(pid)
+                else:
+                    canonical_str += ''.join(sorted(canonical_part)) + '*'
+                    canonical_part = str(pid)
+
             try:
-                resp = requests[ind].serve()
-                requests[ind] = processes[ind].send(resp)
+                resp = requests[pid].serve()
+                requests[pid] = processes[pid].send(resp)
             except StopIteration:
                 # This process has already terminated. No need to change
                 # self._steps since this must have been handled in _dfs.
                 pass
 
-        return server, processes, requests
+        canonical_str += ''.join(sorted(canonical_part))
+        return server, processes, requests, canonical_str
 
     def _dfs(self, verbose=False):
         """
@@ -103,7 +122,10 @@ class Sim:
             s = ''.join(map(lambda x: str(x), self._hist))
             print(s, end='\r', flush=True)
 
-        server, processes, requests = self._exec_hist()
+        server, processes, requests, canonical_str = self._exec_hist()
+
+        if canonical_str in self._memo:
+            return
 
         end = True  # Whether all threads have finished
         for i in range(self.n):
@@ -136,6 +158,8 @@ class Sim:
                 self._steps[i] = True
             if added_result:   # Restore _result
                 self._result.responses[i].pop()
+
+        self._memo.add(canonical_str)
 
         if end:
             res = deepcopy(self._result)
