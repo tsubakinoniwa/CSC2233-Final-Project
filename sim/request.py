@@ -18,7 +18,7 @@ class Request:
         READ    = 2
         WRITE   = 3
 
-    # Matrix of commutivity, where indices are operations converted to ints
+    # Matrix of commutativity, where indices are operations converted to ints
     # as specified by the enumeration above.
     commute_mat = [
         [True, True, True, False],  # Whether GETATTR commutes with others
