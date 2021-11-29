@@ -5,6 +5,36 @@ from .server import Server
 from .request import Request
 
 
+class UnionFind:
+    """
+    The union-find (disjoint-set) data structure with path compression.
+    Used to prune the backtracking search space by grouping commuting
+    operations together, since the commute relation is an equivalence relation.
+    """
+
+    def __init__(self, n):
+        self.pars = list(range(n))
+        self.rank = [1] * n
+        self.num_sets = n
+
+    def union(self, i, j):
+        if self.find(i) == self.find(j):
+            return
+        if self.rank[self.pars[i]] < self.rank[self.pars[j]]:
+            self.pars[self.pars[i]] = self.pars[j]
+            self.rank[self.pars[j]] += self.rank[self.pars[i]]
+        else:
+            self.pars[self.pars[j]] = self.pars[i]
+            self.rank[self.pars[i]] += self.rank[self.pars[j]]
+        self.num_sets -= 1
+
+    def find(self, i):
+        if self.pars[i] == i:
+            return i
+        self.pars[i] = self.find(self.pars[i])
+        return self.pars[i]
+
+
 class Sim:
     """
     Main simulation class.
@@ -106,41 +136,78 @@ class Sim:
         server, processes, requests = self._exec_hist()
 
         end = True  # Whether all threads have finished
-        for i in range(self.n):
-            changed_steps = False
-            added_result = False
 
+        # Group all permuting operations in this level and apply them in one
+        # go, reducing the search space.
+        uf = UnionFind(self.n)
+        for i in range(self.n):
             if not self._steps[i]:
-                continue  # Cannot schedule this thread to do more
+                continue
 
             end = False
-            try:
-                req = requests[i]
-                resp = req.serve()
-                if req.type == Request.Type.READ:
-                    if len(resp) == 1:  # This read returned NFSERR_NOENT
-                        pass
-                    else:
-                        added_result = True
-                        self._result.add_response(i, resp[2])
 
-                requests[i] = processes[i].send(resp)
-            except StopIteration:
-                self._steps[i] = False  # No more steps for this process
-                changed_steps = True
+            for j in range(i):  # Union this with other operations
+                if requests[i].commutes_with(requests[j]):
+                    uf.union(i, j)
+                    break
 
-            self._hist.append(i)
-            self._dfs(verbose=verbose)
-            self._hist.pop()   # Restore _hist
-            if changed_steps:  # Restore _steps
-                self._steps[i] = True
-            if added_result:   # Restore _result
-                self._result.responses[i].pop()
-
+        # Terminate early if all processes terminate
         if end:
+            print('')
             res = deepcopy(self._result)
             res.file_content = ''.join(server.files['foo.txt'])
             self.results.add(res)
+            return
+
+        partitions = []
+        partition_end = []
+        ppid_partition_map = {}
+        for i in range(self.n):
+            ppid = uf.find(i)
+            if ppid not in ppid_partition_map:
+                ppid_partition_map[ppid] = len(partitions)
+                partitions.append([])
+                partition_end.append(True)
+
+            partitions[ppid_partition_map[ppid]].append(i)
+            if self._steps[i]:
+                partition_end[ppid_partition_map[ppid]] = False
+
+        for partition, end in zip(partitions, partition_end):
+            if end:
+                continue
+
+            changed_steps = [False] * len(partition)
+            added_result = [False] * len(partition)
+
+            # One loop to execute all the requests
+            for idx, pid in enumerate(partition):
+                try:
+                    req = requests[pid]
+                    resp = req.serve()
+                    if req.type == Request.Type.READ:
+                        if len(resp) == 1:  # This read returned NFSERR_NOENT
+                            pass
+                        else:
+                            added_result[idx] = True
+                            self._result.add_response(pid, resp[2])
+
+                    requests[pid] = processes[pid].send(resp)
+                except StopIteration:
+                    changed_steps[idx] = True
+                    self._steps[pid] = False  # No more steps for this process
+
+                self._hist.append(pid)
+
+            # Backtrack after applying all operations in this partition
+            self._dfs(verbose=verbose)
+
+            for idx, pid in enumerate(partition):
+                self._hist.pop()   # Restore _hist
+                if changed_steps[idx]:  # Restore _steps
+                    self._steps[pid] = True
+                if added_result[idx]:   # Restore _result
+                    self._result.responses[pid].pop()
 
     def summarize(self):
         """
