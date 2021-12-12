@@ -131,10 +131,10 @@ class Server(NFSPROC):
     def remove(self, fhandle: FileHandle, name: str) -> NFSPROC.REMOVE_RET_TYPE:
         pass
 
-    def mkdir(self) -> NFSPROC.MKDIR_RET_TYPE:
+    def mkdir(self, fhandle: FileHandle, name: str) -> NFSPROC.MKDIR_RET_TYPE:
         pass
 
-    def rmdir(self) -> NFSPROC.RMDIR_RET_TYPE:
+    def rmdir(self, fhandle: FileHandle, name: str) -> NFSPROC.RMDIR_RET_TYPE:
         pass
 
     def __parse_fhandle(self, fhandle: FileHandle) -> File:

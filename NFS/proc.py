@@ -47,9 +47,9 @@ class NFSPROC:
     def remove(self, fhandle: FileHandle, name: str) -> REMOVE_RET_TYPE:
         pass
 
-    def mkdir(self) -> MKDIR_RET_TYPE:
+    def mkdir(self, fhandle: FileHandle, name: str) -> MKDIR_RET_TYPE:
         pass
 
-    def rmdir(self) -> RMDIR_RET_TYPE:
+    def rmdir(self, fhanlde: FileHandle, name: str) -> RMDIR_RET_TYPE:
         pass
 
