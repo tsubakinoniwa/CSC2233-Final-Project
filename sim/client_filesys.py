@@ -42,19 +42,21 @@ class ClientFileSystem:
         self.available_fds = deque(range(ClientFileSystem.MAX_FILES))
         self.attribute_cache = {}
 
-    def open(self, fname: str) -> Generator[
+    def open(self, path: str) -> Generator[
             Request, NFSPROC.LOOKUP_RET_TYPE, int]:
         """
         Open a file
-        :param fname: file name of the file to open
-        :return: -1 if the filenmame is not found, otherwise a file descriptor
+        :param path: "/" delimited absolute path to the file to be opened
+        :return: -1 if the filename is not found, otherwise a file descriptor
         """
-        empty_fhandle = FileHandle([])
-        req = Request(Request.Type.LOOKUP, self.server.lookup, empty_fhandle, fname)
+        parts = path.strip().split('/')
+        fname = parts[-1]
+
+        fhandle = FileHandle(parts[1:-1])  # Absolute paths start with /
+        req = Request(Request.Type.LOOKUP, self.server.lookup, fhandle, fname)
         resp = yield req
 
         if len(resp) == 1:  # The file is not found
-            assert(resp[0] == Stat.NFSERR_NOENT)
             return -1  # Invalid file descriptor
 
         _, fhandle, fattr = resp
@@ -98,14 +100,13 @@ class ClientFileSystem:
             return ''
 
         file = self.file_descriptors[fd]
-        fhandle = FileHandle([file.fname])
+        fhandle = file.fhandle
         offset = file.offset
 
         req = Request(Request.Type.READ, self.server.read, fhandle, offset, count)
         resp = yield req
 
         if len(resp) == 1:
-            assert(resp[0] == Stat.NFSERR_NOENT)
             return ''
 
         _, fattr, res = resp
@@ -183,7 +184,6 @@ class ClientFileSystem:
         resp = yield req
 
         if len(resp) == 1:
-            assert(resp[0] == Stat.NFSERR_NOENT)
             return False
 
         _, fattr = resp

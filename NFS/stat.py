@@ -7,5 +7,10 @@ class Stat(Enum):
     for our purpose.
     """
 
-    NFS_OK       = 0
+    NFS_OK = 0
     NFSERR_NOENT = 2
+    NFSERR_EXIST = 17
+    NFSERR_NOTDIR = 20
+    NFSERR_ISDIR = 21
+    NFSERR_NOTEMPTY = 66
+    NFSERR_STALE = 70
