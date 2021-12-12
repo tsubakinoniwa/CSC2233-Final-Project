@@ -32,7 +32,7 @@ class Sim:
         def __init__(self, n: int):
             self.n = n
             self.responses = [[] for _ in range(n)]
-            self.file_content = ''
+            self.server_json = ''
 
         def add_response(self, i, resp):
             self.responses[i].append(resp)
@@ -42,7 +42,7 @@ class Sim:
             for resp in self.responses:
                 for s in resp:
                     res = (res << 1) ^ hash(s)
-            res = (res << 1) ^ hash(self.file_content)
+            res = (res << 1) ^ hash(self.server_json)
             return res
 
         def __eq__(self, other):
@@ -59,7 +59,7 @@ class Sim:
                 if resp != o_resp:
                     return False
 
-            return self.file_content == other.file_content
+            return self.server_json == other.server_json
 
     def __init__(self, proc_mains: List[Callable[[Server], Any]]):
         self.n = len(proc_mains)
@@ -163,7 +163,7 @@ class Sim:
 
         if end:
             res = deepcopy(self._result)
-            res.file_content = ''.join(server.files['foo.txt'])
+            res.server_json = server.to_json()
             self.results.add(res)
 
     def summarize(self):
@@ -182,5 +182,5 @@ class Sim:
             for p, m in enumerate(res.responses):
                 if m:
                     print(f'p{p}: {str(m)}')
-            print(f'File: {res.file_content}')
+            print(f'File: {res.server_json}')
             print('-' * 50)

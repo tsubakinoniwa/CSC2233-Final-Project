@@ -4,10 +4,14 @@ from NFS.proc import NFSPROC
 from NFS.fattr import FileAttribute
 from NFS.fhandle import FileHandle
 from NFS.stat import Stat
+import json
 
 
 class File:
     def is_raw_file(self) -> bool:
+        pass
+
+    def flatten(self):
         pass
 
 
@@ -21,6 +25,9 @@ class RawFile(File):
     def is_raw_file(self) -> bool:
         return True
 
+    def flatten(self):
+        return ''.join(self.bytes)
+
 
 class Directory(File):
     """
@@ -32,6 +39,12 @@ class Directory(File):
 
     def is_raw_file(self) -> bool:
         return False
+
+    def flatten(self):
+        flat = {}
+        for k, v in self.files.items():
+            flat[k] = v.flatten()
+        return flat
 
 
 class Server(NFSPROC):
@@ -138,3 +151,10 @@ class Server(NFSPROC):
                 raise FileNotFoundError
 
         return fptr
+
+    def to_json(self) -> str:
+        """
+        To be called by the simulation class. Serialize the directory structure
+        :return: JSON string representing serialized node
+        """
+        return json.dumps(self.root.flatten())
