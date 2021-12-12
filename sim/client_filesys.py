@@ -189,3 +189,12 @@ class ClientFileSystem:
         _, fattr = resp
         self.attribute_cache[fd] = fattr
         return fattr.size
+
+    def seek(self, fd: int, pos: int) -> bool:
+        if fd not in self.file_descriptors:
+            return False
+        file = self.file_descriptors[fd]
+
+        file.offset = pos
+        return True
+
