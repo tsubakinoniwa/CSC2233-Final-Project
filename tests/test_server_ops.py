@@ -8,24 +8,34 @@ class ServerFileOperations(unittest.TestCase):
     def setUp(self):
         self.server = Server()
 
+    def test_getattr(self):
+        resp = self.server.getattr(FileHandle(['foo.txt']))
+        self.assertEqual(len(resp), 2)
+        self.assertEqual(resp[0], Stat.NFS_OK)
+
     def test_invalid_lookup(self):
         resp = self.server.lookup(FileHandle([]), 'bar.txt')
-        self.assertEqual(len(resp), 1, "Returning more than expected")
+        self.assertEqual(len(resp), 1)
         self.assertEqual(resp[0], Stat.NFSERR_NOENT)
 
         resp = self.server.lookup(FileHandle(['/']), 'foo.txt')
-        self.assertEqual(len(resp), 1, "Returning more than expected")
+        self.assertEqual(len(resp), 1)
         self.assertEqual(resp[0], Stat.NFSERR_NOENT)
+
+    def test_valid_lookup(self):
+        resp = self.server.lookup(FileHandle([]), 'foo.txt')
+        self.assertEqual(len(resp), 3)
+        self.assertEqual(resp[0], Stat.NFS_OK)
 
     def test_append(self):
         resp = self.server.lookup(FileHandle([]), 'foo.txt')
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
 
         _, fhandle, fattr = resp
         self.server.write(fhandle, 0, "Hello, world!")
 
         resp = self.server.read(fhandle, 0, 100)
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
         _, fattr, res = resp
 
         self.assertEqual(fattr.size, len("Hello, world!"), "File length mismatch")
@@ -33,14 +43,14 @@ class ServerFileOperations(unittest.TestCase):
 
     def test_overwrite(self):
         resp = self.server.lookup(FileHandle([]), 'foo.txt')
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
 
         _, fhandle, fattr = resp
         self.server.write(fhandle, 0, "Hello, world!")
         self.server.write(fhandle, 2, "abcdefg")
 
         resp = self.server.read(fhandle, 0, 100)
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
 
         _, fattr, res = resp
         self.assertEqual(fattr.size, len("Heabcdefgrld!"), "File length mismatch")
@@ -48,14 +58,14 @@ class ServerFileOperations(unittest.TestCase):
 
     def test_long_append(self):
         resp = self.server.lookup(FileHandle([]), 'foo.txt')
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
 
         _, fhandle, fattr = resp
         self.server.write(fhandle, 0, "a")
         self.server.write(fhandle, 9, "b")
 
         resp = self.server.read(fhandle, 0, 100)
-        self.assertEqual(len(resp), 3, "Returning less than expected")
+        self.assertEqual(len(resp), 3)
 
         _, fattr, res = resp
         self.assertEqual(fattr.size, 10, "File length mismatch")

@@ -9,7 +9,7 @@ class ClientFileSystemOperations(unittest.TestCase):
         self.fs = ClientFileSystem(self.server)
 
     def test_open_invalid_file(self):
-        gen = self.fs.open('bar.txt')
+        gen = self.fs.open('/bar.txt')
 
         req = next(gen)
         resp = req.serve()
@@ -21,7 +21,7 @@ class ClientFileSystemOperations(unittest.TestCase):
         self.assertEqual(fd, -1)
 
     def test_open_valid_file(self):
-        gen = self.fs.open('foo.txt')
+        gen = self.fs.open('/foo.txt')
 
         req = next(gen)
         resp = req.serve()
@@ -51,13 +51,16 @@ class ClientFileSystemOperations(unittest.TestCase):
         self.assertTrue(cm.exception.value)
 
         if test:
-            self.assertEqual(s, ''.join(self.server.files['foo.txt']))
+            bytes = self.server.root.files['foo.txt'].bytes
+            self.assertEqual(s, ''.join(bytes))
 
     def test_consecutive_write(self):
         fd = self.test_open_valid_file()
         self.test_write(fd=fd, s="abc", test=True)
         self.test_write(fd=fd, s="def", test=False)
-        self.assertEqual("abcdef", ''.join(self.server.files['foo.txt']))
+
+        bytes = self.server.root.files['foo.txt'].bytes
+        self.assertEqual("abcdef", ''.join(bytes))
 
     def test_read(self):
         s = "testing read"
@@ -90,7 +93,9 @@ class ClientFileSystemOperations(unittest.TestCase):
         with self.assertRaises(StopIteration) as cm:
             gen.send(resp)
         self.assertTrue(cm.exception.value)
-        self.assertEqual(s1+s2, ''.join(self.server.files['foo.txt']))
+
+        bytes = self.server.root.files['foo.txt'].bytes
+        self.assertEqual(s1+s2, ''.join(bytes))
 
 if __name__ == '__main__':
     unittest.main()
