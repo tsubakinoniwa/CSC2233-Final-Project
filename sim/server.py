@@ -64,7 +64,7 @@ class Server(NFSPROC):
             return Stat.NFSERR_NOENT,
 
         if not file.is_raw_file():
-            return Stat.NFSERR_ISDIR,
+            return Stat.NFS_OK, FileAttribute()  # Return a dummy value
         assert(isinstance(file, RawFile))
 
         fattr = FileAttribute()
@@ -126,16 +126,84 @@ class Server(NFSPROC):
         return Stat.NFS_OK, self.getattr(fhandle)[1]
 
     def create(self, fhandle: FileHandle, name: str) -> NFSPROC.CREATE_RET_TYPE:
-        pass
+        try:
+            fptr = self.__parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT,
+
+        if fptr.is_raw_file():  # Check if the file is a directory
+            return Stat.NFSERR_NOTDIR,
+
+        assert(isinstance(fptr, Directory))
+
+        if name in fptr.files:  # Check if the raw file already exists
+            return Stat.NFSERR_EXIST,
+
+        fptr.files[name] = RawFile()
+        fhandle = FileHandle([*fhandle.path, name])
+        fattr = self.getattr(fhandle)[1]
+
+        return Stat.NFS_OK, fhandle, fattr
 
     def remove(self, fhandle: FileHandle, name: str) -> NFSPROC.REMOVE_RET_TYPE:
-        pass
+        try:
+            fptr = self.__parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT
+
+        if fptr.is_raw_file():  # Check if the file is a directory
+            return Stat.NFSERR_NOTDIR
+
+        assert(isinstance(fptr, Directory))
+
+        if name not in fptr.files:
+            return Stat.NFSERR_NOENT
+        elif not fptr.files[name].is_raw_file():
+            return Stat.NFSERR_ISDIR
+
+        del fptr.files[name]
+        return Stat.NFS_OK
 
     def mkdir(self, fhandle: FileHandle, name: str) -> NFSPROC.MKDIR_RET_TYPE:
-        pass
+        try:
+            fptr = self.__parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT,
+
+        if fptr.is_raw_file():  # Check if the file is a directory
+            return Stat.NFSERR_NOTDIR,
+
+        assert(isinstance(fptr, Directory))
+
+        if name in fptr.files:
+            return Stat.NFSERR_EXIST,
+
+        fptr.files[name] = Directory()
+        fhandle = FileHandle([*fhandle.path, name])
+        fattr = self.getattr(fhandle)[1]
+
+        return Stat.NFS_OK, fhandle, fattr
 
     def rmdir(self, fhandle: FileHandle, name: str) -> NFSPROC.RMDIR_RET_TYPE:
-        pass
+        try:
+            fptr = self.__parse_fhandle(fhandle)
+        except FileNotFoundError:
+            return Stat.NFSERR_NOENT
+
+        if fptr.is_raw_file():  # Check if the file is a directory
+            return Stat.NFSERR_NOTDIR
+
+        assert(isinstance(fptr, Directory))
+
+        if name not in fptr.files:
+            return Stat.NFSERR_NOENT
+        elif fptr.files[name].is_raw_file():
+            return Stat.NFSERR_NOTDIR
+        elif len(fptr.files[name].files):
+            return Stat.NFSERR_NOTEMPTY
+
+        del fptr.files[name]
+        return Stat.NFS_OK
 
     def __parse_fhandle(self, fhandle: FileHandle) -> File:
         fptr = self.root
