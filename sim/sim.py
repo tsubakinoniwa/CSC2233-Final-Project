@@ -27,6 +27,7 @@ class Sim:
     class Result:
         """
         Struct for the result of each execution
+        TODO: Add response type to consideration
         """
 
         def __init__(self, n: int):

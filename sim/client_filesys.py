@@ -60,7 +60,10 @@ class ClientFileSystem:
             return -1  # Invalid file descriptor
 
         _, fhandle, fattr = resp
+        return self.__local_create_fd(fhandle, fattr, fname)
 
+    def __local_create_fd(self, fhandle: FileHandle, fattr: FileAttribute,
+                          fname: str) -> int:
         if not len(self.available_fds):
             return -1  # All file descriptors used up
 
@@ -134,7 +137,7 @@ class ClientFileSystem:
         resp = yield req
 
         if len(resp) == 1:
-            assert(resp[0] == Stat.NFSERR_NOENT)
+            assert (resp[0] == Stat.NFSERR_NOENT)
             return False
 
         _, fattr = resp
@@ -144,9 +147,9 @@ class ClientFileSystem:
         return True
 
     def append(self, fd: int, s: str) -> Generator[
-            Request,
-            Union[NFSPROC.GETATTR_RET_TYPE, NFSPROC.WRITE_RET_TYPE],
-            bool
+        Request,
+        Union[NFSPROC.GETATTR_RET_TYPE, NFSPROC.WRITE_RET_TYPE],
+        bool
     ]:
         """
         Appends s to the end of the file referenced by fd
@@ -164,6 +167,60 @@ class ClientFileSystem:
         if file.offset == -1:  # Check if size returned an error
             return False
         return (yield from self.write(fd, s))
+
+    def create(self, path: str) -> Generator[
+            Request, NFSPROC.CREATE_RET_TYPE, int]:
+        parts = path.strip().split('/')
+        fhandle = FileHandle(parts[:-1])
+        fname = parts[-1]
+
+        req = Request(Request.Type.CREATE, self.server.create, fhandle, fname)
+        resp = yield req
+
+        if len(resp) == 1:
+            return -1
+
+        _, fhandle, fattr = resp
+        return self.__local_create_fd(fhandle, fattr, fname)
+
+    def remove(self, fd: int) -> Generator[
+            Request, NFSPROC.REMOVE_RET_TYPE, bool]:
+        if fd not in self.file_descriptors:
+            return False
+
+        file = self.file_descriptors[fd]
+        fhandle = file.fhandle
+        fname = file.fname
+
+        req = Request(Request.Type.REMOVE, self.server.remove, fhandle, fname)
+        resp = yield req
+
+        if resp != Stat.NFS_OK:
+            return False
+
+        return self.close(fd)
+
+    def mkdir(self, path: str) -> Generator[
+            Request, NFSPROC.MKDIR_RET_TYPE, bool]:
+        parts = path.strip().split('/')
+        fhandle = FileHandle(parts[:-1])
+        dirname = parts[-1]
+
+        req = Request(Request.Type.MKDIR, self.server.mkdir, fhandle, dirname)
+        resp = yield req
+
+        return len(resp) == 3
+
+    def rmdir(self, path: str) -> Generator[
+            Request, NFSPROC.RMDIR_RET_TYPE, bool]:
+        parts = path.strip().split('/')
+        fhandle = FileHandle(parts[:-1])
+        dirname = parts[-1]
+
+        req = Request(Request.Type.MKDIR, self.server.rmdir, fhandle, dirname)
+        resp = yield req
+
+        return resp == Stat.NFS_OK
 
     def size(self, fd: int) -> Generator[
             Request, NFSPROC.GETATTR_RET_TYPE, int]:
@@ -197,4 +254,3 @@ class ClientFileSystem:
 
         file.offset = pos
         return True
-
