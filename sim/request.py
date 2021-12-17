@@ -29,11 +29,26 @@ class Request:
         self.func = func
         self.args = args
         self.ready = True
+        self.resp = None
+
+    def summarize(self):
+        if self.ready:  # Hasn't executed yet
+            raise Exception
+
+        if self.type in {Request.Type.REMOVE, Request.Type.RMDIR}:
+            return self.resp.name,
+        elif self.type == Request.Type.READ:
+            # return (self.resp[0].name,
+            #         *[t.summarize() for t in self.resp[1:]])
+            return self.resp[0].name, self.resp[-1]
+        else:
+            return self.resp[0].name,
 
     def serve(self):
         if self.ready:
             self.ready = False
-            return self.func(*self.args)
+            self.resp = self.func(*self.args)
+            return self.resp
 
     def is_file_op(self):
         return self.type in {
@@ -105,7 +120,10 @@ class Request:
             assert(isinstance(fhandle, FileHandle))
             assert(isinstance(fname, str))
 
-            return '/' + '/'.join(fhandle.path) + '/' + fname
+            if len(fhandle.path) > 0:
+                return '/' + '/'.join(fhandle.path) + '/' + fname
+            else:
+                return '/' + fname
         else:
             fhandle = r.args[0]
             assert(isinstance(fhandle, FileHandle))
@@ -125,4 +143,7 @@ class Request:
         assert(isinstance(fhandle, FileHandle))
         assert(isinstance(dirname, str))
 
-        return '/' + '/'.join(fhandle.path) + '/' + dirname
+        if len(fhandle.path) > 0:
+            return '/' + '/'.join(fhandle.path) + '/' + dirname
+        else:
+            return '/' + dirname
