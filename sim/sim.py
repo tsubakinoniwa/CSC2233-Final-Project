@@ -124,12 +124,17 @@ class Sim:
             print(s, end='\r', flush=True)
 
         server, processes, requests, canonical_str = self._exec_hist()
-
         if canonical_str in self._memo:
             return
 
         end = True  # Whether all threads have finished
         for i in range(self.n):
+            # Computing the history again because the requests hold references
+            # to servers, and the servers were operated on in the exploration.
+            # Doing this will create fresh copies of requests that hold
+            # references to the correct state of the server.
+            server, processes, requests, canonical_str = self._exec_hist()
+
             changed_steps = False
             added_result = False
 
@@ -140,12 +145,8 @@ class Sim:
             try:
                 req = requests[i]
                 resp = req.serve()
-                if req.type == Request.Type.READ:
-                    if len(resp) == 1:  # This read returned NFSERR_NOENT
-                        pass
-                    else:
-                        added_result = True
-                        self._result.add_response(i, resp[2])
+                self._result.add_response(i, req.summarize())
+                added_result = True
 
                 requests[i] = processes[i].send(resp)
             except StopIteration:
