@@ -171,7 +171,7 @@ class ClientFileSystem:
     def create(self, path: str) -> Generator[
             Request, NFSPROC.CREATE_RET_TYPE, int]:
         parts = path.strip().split('/')
-        fhandle = FileHandle(parts[:-1])
+        fhandle = FileHandle(parts[1:-1])
         fname = parts[-1]
 
         req = Request(Request.Type.CREATE, self.server.create, fhandle, fname)
@@ -189,7 +189,10 @@ class ClientFileSystem:
             return False
 
         file = self.file_descriptors[fd]
-        fhandle = file.fhandle
+
+        # Get the file handle to the directory containing the file we want to
+        # delete as specified in RFC1094.
+        fhandle = FileHandle([*file.fhandle.path[:-1]])
         fname = file.fname
 
         req = Request(Request.Type.REMOVE, self.server.remove, fhandle, fname)
@@ -203,7 +206,7 @@ class ClientFileSystem:
     def mkdir(self, path: str) -> Generator[
             Request, NFSPROC.MKDIR_RET_TYPE, bool]:
         parts = path.strip().split('/')
-        fhandle = FileHandle(parts[:-1])
+        fhandle = FileHandle(parts[1:-1])
         dirname = parts[-1]
 
         req = Request(Request.Type.MKDIR, self.server.mkdir, fhandle, dirname)
@@ -214,7 +217,7 @@ class ClientFileSystem:
     def rmdir(self, path: str) -> Generator[
             Request, NFSPROC.RMDIR_RET_TYPE, bool]:
         parts = path.strip().split('/')
-        fhandle = FileHandle(parts[:-1])
+        fhandle = FileHandle(parts[1:-1])
         dirname = parts[-1]
 
         req = Request(Request.Type.MKDIR, self.server.rmdir, fhandle, dirname)
