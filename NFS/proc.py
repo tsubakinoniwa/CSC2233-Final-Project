@@ -22,6 +22,10 @@ class NFSPROC:
     LOOKUP_RET_TYPE = Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]
     READ_RET_TYPE = Tuple[Stat, Optional[FileAttribute], Optional[str]]
     WRITE_RET_TYPE = Tuple[Stat, Optional[FileAttribute]]
+    CREATE_RET_TYPE = Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]
+    REMOVE_RET_TYPE = Stat
+    MKDIR_RET_TYPE = Tuple[Stat, Optional[FileHandle], Optional[FileAttribute]]
+    RMDIR_RET_TYPE = Stat
 
     def getattr(self, fhandle: FileHandle) -> GETATTR_RET_TYPE:
         pass
@@ -36,3 +40,16 @@ class NFSPROC:
     def write(self, fhandle: FileHandle, offset: int, data: str) \
             -> WRITE_RET_TYPE:
         pass
+
+    def create(self, fhandle: FileHandle, name: str) -> CREATE_RET_TYPE:
+        pass
+
+    def remove(self, fhandle: FileHandle, name: str) -> REMOVE_RET_TYPE:
+        pass
+
+    def mkdir(self, fhandle: FileHandle, name: str) -> MKDIR_RET_TYPE:
+        pass
+
+    def rmdir(self, fhandle: FileHandle, name: str) -> RMDIR_RET_TYPE:
+        pass
+

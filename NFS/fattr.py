@@ -7,5 +7,3 @@ class FileAttribute:
 
     def __init__(self):
         self.size = 0    # File size
-        self.atime = -1  # Last accessed time
-        self.mtime = -1  # Last modified time

@@ -27,12 +27,13 @@ class Sim:
     class Result:
         """
         Struct for the result of each execution
+        TODO: Add response type to consideration
         """
 
         def __init__(self, n: int):
             self.n = n
             self.responses = [[] for _ in range(n)]
-            self.file_content = ''
+            self.server_json = ''
 
         def add_response(self, i, resp):
             self.responses[i].append(resp)
@@ -42,7 +43,7 @@ class Sim:
             for resp in self.responses:
                 for s in resp:
                     res = (res << 1) ^ hash(s)
-            res = (res << 1) ^ hash(self.file_content)
+            res = (res << 1) ^ hash(self.server_json)
             return res
 
         def __eq__(self, other):
@@ -59,7 +60,7 @@ class Sim:
                 if resp != o_resp:
                     return False
 
-            return self.file_content == other.file_content
+            return self.server_json == other.server_json
 
     def __init__(self, proc_mains: List[Callable[[Server], Any]]):
         self.n = len(proc_mains)
@@ -123,12 +124,17 @@ class Sim:
             print(s, end='\r', flush=True)
 
         server, processes, requests, canonical_str = self._exec_hist()
-
         if canonical_str in self._memo:
             return
 
         end = True  # Whether all threads have finished
         for i in range(self.n):
+            # Computing the history again because the requests hold references
+            # to servers, and the servers were operated on in the exploration.
+            # Doing this will create fresh copies of requests that hold
+            # references to the correct state of the server.
+            server, processes, requests, canonical_str = self._exec_hist()
+
             changed_steps = False
             added_result = False
 
@@ -139,12 +145,8 @@ class Sim:
             try:
                 req = requests[i]
                 resp = req.serve()
-                if req.type == Request.Type.READ:
-                    if len(resp) == 1:  # This read returned NFSERR_NOENT
-                        pass
-                    else:
-                        added_result = True
-                        self._result.add_response(i, resp[2])
+                self._result.add_response(i, req.summarize())
+                added_result = True
 
                 requests[i] = processes[i].send(resp)
             except StopIteration:
@@ -163,7 +165,7 @@ class Sim:
 
         if end:
             res = deepcopy(self._result)
-            res.file_content = ''.join(server.files['foo.txt'])
+            res.server_json = server.to_json()
             self.results.add(res)
 
     def summarize(self):
@@ -182,5 +184,5 @@ class Sim:
             for p, m in enumerate(res.responses):
                 if m:
                     print(f'p{p}: {str(m)}')
-            print(f'File: {res.file_content}')
+            print(f'File: {res.server_json}')
             print('-' * 50)
