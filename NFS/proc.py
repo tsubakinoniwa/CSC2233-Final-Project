@@ -50,6 +50,6 @@ class NFSPROC:
     def mkdir(self, fhandle: FileHandle, name: str) -> MKDIR_RET_TYPE:
         pass
 
-    def rmdir(self, fhanlde: FileHandle, name: str) -> RMDIR_RET_TYPE:
+    def rmdir(self, fhandle: FileHandle, name: str) -> RMDIR_RET_TYPE:
         pass
 
