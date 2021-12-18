@@ -56,6 +56,7 @@ class Server(NFSPROC):
     def __init__(self):
         self.root = Directory()
         self.root.files['foo.txt'] = RawFile()  # Populate a foo.txt in root dir
+        self.root.files['bar.txt'] = RawFile()  # Populate a bar.txt in root dir
 
     def getattr(self, fhandle: FileHandle) -> NFSPROC.GETATTR_RET_TYPE:
         try:
