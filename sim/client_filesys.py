@@ -220,7 +220,7 @@ class ClientFileSystem:
         fhandle = FileHandle(parts[1:-1])
         dirname = parts[-1]
 
-        req = Request(Request.Type.MKDIR, self.server.rmdir, fhandle, dirname)
+        req = Request(Request.Type.RMDIR, self.server.rmdir, fhandle, dirname)
         resp = yield req
 
         return resp == Stat.NFS_OK
