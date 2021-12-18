@@ -77,10 +77,10 @@ class Sim:
         # sorted in "canonical" form to represent searched subtrees
         self._memo = set()
 
-    def explore(self, verbose=False):
+    def explore(self, verbose=False, prune=True):
         if not self.proc_mains:
             raise Exception("No main functions supplied")
-        self._dfs(verbose=verbose)
+        self._dfs(verbose=verbose, prune=prune)
 
     def _exec_hist(self):
         server = Server()
@@ -112,7 +112,7 @@ class Sim:
         canonical_str += ''.join(sorted(canonical_part))
         return server, processes, requests, canonical_str
 
-    def _dfs(self, verbose=False):
+    def _dfs(self, verbose, prune):
         """
         Use backtracking to explore all interleaving of NFS operations from
         each process supplied to this object at construction time.
@@ -124,8 +124,10 @@ class Sim:
             print(s, end='\r', flush=True)
 
         server, processes, requests, canonical_str = self._exec_hist()
-        if canonical_str in self._memo:
-            return
+
+        if prune:
+            if canonical_str in self._memo:
+                return
 
         end = True  # Whether all threads have finished
         for i in range(self.n):
@@ -154,14 +156,15 @@ class Sim:
                 changed_steps = True
 
             self._hist.append(i)
-            self._dfs(verbose=verbose)
+            self._dfs(verbose, prune)
             self._hist.pop()   # Restore _hist
             if changed_steps:  # Restore _steps
                 self._steps[i] = True
             if added_result:   # Restore _result
                 self._result.responses[i].pop()
 
-        self._memo.add(canonical_str)
+        if prune:
+            self._memo.add(canonical_str)
 
         if end:
             res = deepcopy(self._result)
